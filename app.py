@@ -9,7 +9,6 @@ st.markdown("""
     .stApp { background-color: #0d1117; color: #e5e7eb; }
     header {visibility: hidden;}
     .stMetric { background-color: #161b22; padding: 10px; border-radius: 5px; border: 1px solid #30363d; }
-    /* This makes input boxes look cleaner on mobile */
     .stNumberInput { margin-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
@@ -20,6 +19,7 @@ def solve_statics(L, p_loads, moments, udls):
     V = np.zeros_like(x)
     M = np.zeros_like(x)
     
+    # Global Reactions (ΣMa = 0)
     sum_p_m = sum(p['mag'] * p['pos'] for p in p_loads)
     sum_m_m = sum(m['mag'] for m in moments)
     sum_u_m = sum(u['mag'] * (u['end'] - u['start']) * ((u['start'] + u['end']) / 2) for u in udls)
@@ -28,6 +28,7 @@ def solve_statics(L, p_loads, moments, udls):
     Ra = (sum(p['mag'] for p in p_loads) + sum(u['mag']*(u['end']-u['start']) for u in udls)) - Rb
     
     for i, xi in enumerate(x):
+        # Method of Sections Logic
         v_xi, m_xi = Ra, Ra * xi
         for p in p_loads:
             if xi > p['pos']:
@@ -45,7 +46,7 @@ def solve_statics(L, p_loads, moments, udls):
         
     return x, V, M, Ra, Rb
 
-# --- 3. MAIN PAGE INPUTS (No Sidebar) ---
+# --- 3. MAIN PAGE INPUTS ---
 st.title("Statics & Mechanics Solver")
 
 st.header("📏 1. Beam Geometry")
@@ -82,21 +83,24 @@ col_r1, col_r2 = st.columns(2)
 col_r1.metric("Ra Reaction", f"{Ra:.2f} kN")
 col_r2.metric("Rb Reaction", f"{Rb:.2f} kN")
 
-# Real Body Diagram
-fig_b, ax_b = plt.subplots(figsize=(10, 2))
-ax_b.set_facecolor('#0d1117'); fig_b.patch.set_facecolor('#0d1117')
-ax_b.hlines(0, 0, L, colors='#3b82f6', lw=10)
-ax_b.plot(0, 0, '^', color='#ef4444', ms=15)
-ax_b.plot(L, 0, 'o', color='#ef4444', ms=12)
-ax_b.annotate(f'Ra={Ra:.1f}', xy=(0,0), xytext=(-1,-2), color='white', arrowprops=dict(arrowstyle='->', color='yellow'))
-ax_b.annotate(f'Rb={Rb:.1f}', xy=(L,0), xytext=(L+0.2,-2), color='white', arrowprops=dict(arrowstyle='->', color='yellow'))
-ax_b.axis('off')
-st.pyplot(fig_b)
-
-# SFD and BMD
+# SFD and BMD Plots (Reactions are now displayed above these)
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
-ax1.fill_between(x, V, color='dodgerblue', alpha=0.3); ax1.plot(x, V, color='dodgerblue'); ax1.set_title("Shear (V)")
-ax2.fill_between(x, M, color='red', alpha=0.3); ax2.plot(x, M, color='red'); ax2.set_title("Moment (M)")
+ax1.set_facecolor('#0d1117'); fig.patch.set_facecolor('#0d1117')
+ax2.set_facecolor('#0d1117')
+
+# SFD
+ax1.fill_between(x, V, color='dodgerblue', alpha=0.3)
+ax1.plot(x, V, color='dodgerblue')
+ax1.set_title("Shear Force Diagram (V)", color='white')
+ax1.tick_params(colors='white')
+
+# BMD
+ax2.fill_between(x, M, color='red', alpha=0.3)
+ax2.plot(x, M, color='red')
+ax2.set_title("Bending Moment Diagram (M)", color='white')
+ax2.set_xlabel("Length (m)", color='white')
+ax2.tick_params(colors='white')
+
 st.pyplot(fig)
 
 with st.expander("Show Mathematical Derivation"):
